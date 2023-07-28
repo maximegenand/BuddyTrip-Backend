@@ -12,7 +12,7 @@ const eventSchema = mongoose.Schema({
   timeStart: Date,
   timeEnd: Date,
   seats: Number,
-  ticket: String,
+  travelId: String,
   infos: [{
     tokenInfo: String,
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'users' },
