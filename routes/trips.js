@@ -34,7 +34,7 @@ router.post("/", async (req, res) => {
   // On filtre pour supprimer les retours vides
   const participants = participantsBrut.filter(e => e && e);
 
-  // Créer un nouveau voyage (trip)
+  // On créé un nouveau Trip
   const newTrip = new Trip({
     tokenTrip: uid2(32),
     user: user._id,
@@ -45,17 +45,23 @@ router.post("/", async (req, res) => {
     participants,
   });
 
-  // Sauvegarder le voyage dans la base de données
   try {
+    // On enregistre le Trip
     await newTrip.save();
+
+    // On populate les infos du Trip
     await newTrip.populate('user');
     await newTrip.populate('participants');
-    const tripRes = await parseTrip(newTrip);
+
+    // On filtre les infos que l'on veut renvoyer en front
+    const tripRes = parseTrip(newTrip);
     res.json({ result: true, trip: tripRes });
   } catch (error) {
-    console.error("Erreur lors de l'enregistrement du voyage:", error);
-    res.status(404).json({ result: false, error: "Erreur lors de l'enregistrement du voyage." });
+    console.error("Erreur lors de l'enregistrement du Trip :", error);
+    res.status(404).json({ result: false, error: "Erreur lors de l'enregistrement du Trip" });
   }
+
+  // IL FAUT AJOUTER LA GESTION DE LA CREATION DU TRIP DANS LA COLLECTION USERS
 });
 
 
@@ -70,35 +76,40 @@ router.delete("/", async (req, res) => {
   // On récupère les infos du req.body
   const { token, tokenTrip } = req.body;
 
-  // On vérifie si l'utilisateur existe, et si oui on renvoie ses infos
-  const user = await tokenSession(token);
-  if(!user) {
-    return res.status(404).json({ result: false, error: "User not found" });
-  }
+  try {
+    // On vérifie si l'utilisateur existe, et si oui on renvoie ses infos
+    const user = await tokenSession(token);
+    if(!user) {
+      return res.status(404).json({ result: false, error: "User not found" });
+    }
 
-  // On recherche un trip suivant le tokenTrip
-  const findTrip = await Trip.findOne({ tokenTrip });
+    // On recherche un trip suivant le tokenTrip
+    const findTrip = await Trip.findOne({ tokenTrip });
 
-  // Si on trouve pas le trip, on retourne une erreur
-  if (!findTrip) {
-    return res.status(404).json({ result: false, error: "Trip not found" });
-  }
-console.log(findTrip.user , user._id)
-  // Si le user n'est pas propriétaire du trip
-  if (findTrip.user.toString() !== user._id.toString()) {
-    return res.status(404).json({ result: false, error: "Not allowed" });
-  }
+    // Si on trouve pas le trip, on retourne une erreur
+    if (!findTrip) {
+      return res.status(404).json({ result: false, error: "Trip not found" });
+    }
 
-  // On supprime le Trip
-  await Trip.deleteOne({ _id: findTrip._id });
-  res.json({ result: true });
+    // Si le user n'est pas propriétaire du trip
+    if (findTrip.user.toString() !== user._id.toString()) {
+      return res.status(404).json({ result: false, error: "Not allowed" });
+    }
+
+    // On supprime le Trip
+    await Trip.deleteOne({ _id: findTrip._id });
+    res.json({ result: true });
+  } catch (error) {
+    console.error("Erreur lors de la suppression du Trip :", error);
+    res.status(404).json({ result: false, error: "Erreur lors de la suppression du Trip" });
+  }
 
   // IL FAUT AJOUTER LA GESTION DE LA SUPPRESSION DU TRIP DANS LA COLLECTION USERS
 });
 
 
 
-// Route GET pour récupérer les nouveaux trips
+// Route GET pour récupérer les nouveaux Trips
 router.get("/next", async (req, res) => {
   // On vérifie si les infos obligatoires sont bien renseignées
   if (!checkBody(req.query, ["token"])) {
@@ -108,30 +119,58 @@ router.get("/next", async (req, res) => {
   // On récupère les infos du req.query
   const token = req.query.token;
 
-  // On vérifie si l'utilisateur existe, et si oui on renvoie ses infos
-  const user = await tokenSession(token);
-  if(!user) {
-    return res.status(404).json({ result: false, error: "User not found" });
+  try {
+    // On vérifie si l'utilisateur existe, et si oui on renvoie ses infos
+    const user = await tokenSession(token);
+    await user.populate('trips');
+    if(!user) {
+      return res.status(404).json({ result: false, error: "User not found" });
+    }
+
+    // On filtre la date pour afficher seulement les Trip dont la date de fin est égale ou après aujourd'hui
+    const tripsBrut = user.trips.filter((trip) => new Date(trip.dateEnd) >= new Date());
+
+    // On filtre les infos que l'on veut renvoyer en front
+    const trips = tripsBrut.map(trip => parseTrip(trip));
+
+    res.json({ result: true, trips });
+  } catch (error) {
+    console.error("Erreur lors de la récupération des Trips :", error);
+    res.status(404).json({ result: false, error: "Erreur lors de la récupération des Trips" });
   }
-  console.log(user);
-/*
-  const user = await User.findOne({ token }).populate("trips");
-  if (!user) {
-    return res.status(404).json({ result: false, error: "Utilisateur non trouvé." });
-  }
-  const upComingTrips = user.trips.filter((trip) => new Date(trip.dateEnd) > new Date()); // filtrer les trips pour envoyer que les nouveaux trips
-  res.json({ result: true, trips: upComingTrips });*/
 });
 
-// Route GET pour récupérer les anciens trips
+
+
+// Route GET pour récupérer les anciens Trips
 router.get("/past", async (req, res) => {
-  const token = req.query.tokenSession;
-  const user = await User.findOne({ token }).populate("trips");
-  if (!user) {
-    return res.status(404).json({ result: false, error: "Utilisateur non trouvé." });
+  // On vérifie si les infos obligatoires sont bien renseignées
+  if (!checkBody(req.query, ["token"])) {
+    return res.status(404).json({ result: false, error: "Missing or empty fields" });
   }
-  const archiveTrips = user.trips.filter((trip) => new Date(trip.dateEnd) < new Date()); // filtrer les trips pour envoyer que les anciens trips
-  res.json({ result: true, trips: archiveTrips });
+  
+  // On récupère les infos du req.query
+  const token = req.query.token;
+
+  try {
+    // On vérifie si l'utilisateur existe, et si oui on renvoie ses infos
+    const user = await tokenSession(token);
+    await user.populate('trips');
+    if(!user) {
+      return res.status(404).json({ result: false, error: "User not found" });
+    }
+
+    // On filtre la date pour afficher seulement les Trips dont la date de fin est plus ancienne que aujourd'hui
+    const tripsBrut = user.trips.filter((trip) => new Date(trip.dateEnd) < new Date());
+
+    // On filtre les infos que l'on veut renvoyer en front
+    const trips = tripsBrut.map(trip => parseTrip(trip));
+
+    res.json({ result: true, trips });
+  } catch (error) {
+    console.error("Erreur lors de la récupération des Trips :", error);
+    res.status(404).json({ result: false, error: "Erreur lors de la récupération des Trips" });
+  }
 });
 
 // Route GET pour récupérer les informations du trip et la liste de ses événements
