@@ -8,7 +8,7 @@ require('./models/connection');
 const indexRouter = require('./routes/index');
 const usersRouter = require('./routes/users');
 const tripsRouter = require('./routes/trips');
-const eventsRouter = require('./router/events');
+const eventsRouter = require('./routes/events');
 
 const app = express();
 
