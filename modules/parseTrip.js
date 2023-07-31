@@ -1,6 +1,6 @@
 
 // Fonction qui filtre les infos à renvoyer au Front en supprimant les ids et remplacant les user_id par des tokens
-const parseTrip = async tripBrut => {
+const parseTrip = tripBrut => {
   const trip = tripBrut.toJSON();
 
   // On récupère seulement les infos qu'on veut renvoyer
