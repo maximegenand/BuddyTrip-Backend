@@ -8,6 +8,10 @@ require('./models/connection');
 const indexRouter = require('./routes/index');
 const usersRouter = require('./routes/users');
 const tripsRouter = require('./routes/trips');
+<<<<<<< HEAD
+=======
+const eventsRouter = require('./router/events');
+>>>>>>> 35b29121aaa82a2a1e9d74398938f57878b4d817
 
 const app = express();
 
@@ -23,5 +27,9 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
 app.use('/trips', tripsRouter);
+<<<<<<< HEAD
+=======
+app.use('/events', eventsRouter);
+>>>>>>> 35b29121aaa82a2a1e9d74398938f57878b4d817
 
 module.exports = app;
