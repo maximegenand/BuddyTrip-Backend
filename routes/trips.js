@@ -5,32 +5,55 @@ const User = require("../models/users");
 const Event = require("../models/events");
 const uid2 = require("uid2");
 
+// Import des fonctions
+const { checkBody } = require('../modules/checkBody');
+const { tokenSession, tokenUser } = require('../modules/checkUser');
+const { parseTrip } = require("../modules/parseTrip");
+
 // Route POST pour créer un trip
-router.post("/trips", async (req, res) => {
-  if (!checkBody(req.body, ["name", "dateStart", "dateEnd", "description"])) {
-    res.json({ result: false, error: "Missing or empty fields" });
-    return;
+router.post("/", async (req, res) => {
+  // On vérifie si les infos obligatoires sont bien renseignées
+  if (!checkBody(req.body, ["token", "trip"])) {
+    return res.json({ result: false, error: "Missing or empty fields" });
   }
 
   // Destructuration des données du corps de la requête
-  const { name, dateStart, dateEnd, description } = req.body;
+  const token = req.body.token;
+  const trip = req.body.trip;
+
+  // On vérifie si l'utilisateur existe, et si oui on renvoie ses infos
+  const user = await tokenSession(token);
+  //console.log(user);
+  if(!user) {
+    return res.json({ result: false, error: "User not found" });
+  }
+
+  // On récupère les id des participants
+  const participantsBrut = await Promise.all(trip.participants.map(async token => await tokenUser(token)));
+  // On filtre pour supprimer les retours vides
+  const participants = participantsBrut.filter(e => e && e);
 
   // Créer un nouveau voyage (trip)
   const newTrip = new Trip({
     tokenTrip: uid2(32),
-    name,
-    dateStart,
-    dateEnd,
-    description,
+    user: user._id,
+    name: trip.name,
+    dateStart: trip.dateStart,
+    dateEnd: trip.dateEnd,
+    description: trip.description,
+    participants,
   });
 
   // Sauvegarder le voyage dans la base de données
   try {
     await newTrip.save();
-    res.json({ result: true, message: "Voyage créé avec succès !", trip: newTrip });
+    await newTrip.populate('user');
+    await newTrip.populate('participants');
+    const tripRes = await parseTrip(newTrip);
+    res.json({ result: true, trip: tripRes });
   } catch (error) {
-    console.error("Erreur lors de la création du voyage:", error);
-    res.status(500).json({ error: "Erreur lors de la création du voyage." });
+    console.error("Erreur lors de l'enregistrement du voyage:", error);
+    res.json({ result: false, error: "Erreur lors de l'enregistrement du voyage." });
   }
 });
 
