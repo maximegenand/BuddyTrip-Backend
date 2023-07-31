@@ -1,5 +1,5 @@
-var express = require("express");
-var router = express.Router();
+const express = require("express");
+const router = express.Router();
 const Trip = require("../models/trips");
 const User = require("../models/users");
 const Event = require("../models/events");
@@ -7,8 +7,9 @@ const uid2 = require("uid2");
 
 // Import des fonctions
 const { checkBody } = require('../modules/checkBody');
-const { tokenSession, tokenUser } = require('../modules/checkUser');
+const { checkTokenSession, checkTokenUser } = require('../modules/checkUser');
 const { parseTrip } = require("../modules/parseTrip");
+const { parseEvent } = require("../modules/parseEvent");
 
 
 
@@ -24,13 +25,13 @@ router.post("/", async (req, res) => {
   const trip = req.body.trip;
 
   // On vérifie si l'utilisateur existe, et si oui on renvoie ses infos
-  const user = await tokenSession(token);
+  const user = await checkTokenSession(token);
   if(!user) {
     return res.status(404).json({ result: false, error: "User not found" });
   }
 
   // On récupère les id des participants
-  const participantsBrut = await Promise.all(trip.participants.map(async token => await tokenUser(token)));
+  const participantsBrut = await Promise.all(trip.participants.map(async token => await checkTokenUser(token)));
   // On filtre pour supprimer les retours vides
   const participants = participantsBrut.filter(e => e && e);
 
@@ -78,7 +79,7 @@ router.delete("/", async (req, res) => {
 
   try {
     // On vérifie si l'utilisateur existe, et si oui on renvoie ses infos
-    const user = await tokenSession(token);
+    const user = await checkTokenSession(token);
     if(!user) {
       return res.status(404).json({ result: false, error: "User not found" });
     }
@@ -121,11 +122,11 @@ router.get("/next", async (req, res) => {
 
   try {
     // On vérifie si l'utilisateur existe, et si oui on renvoie ses infos
-    const user = await tokenSession(token);
-    await user.populate('trips');
+    const user = await checkTokenSession(token);
     if(!user) {
       return res.status(404).json({ result: false, error: "User not found" });
     }
+    await user.populate('trips');
 
     // On filtre la date pour afficher seulement les Trip dont la date de fin est égale ou après aujourd'hui
     const tripsBrut = user.trips.filter((trip) => new Date(trip.dateEnd) >= new Date());
@@ -154,7 +155,7 @@ router.get("/past", async (req, res) => {
 
   try {
     // On vérifie si l'utilisateur existe, et si oui on renvoie ses infos
-    const user = await tokenSession(token);
+    const user = await checkTokenSession(token);
     await user.populate('trips');
     if(!user) {
       return res.status(404).json({ result: false, error: "User not found" });
@@ -173,31 +174,62 @@ router.get("/past", async (req, res) => {
   }
 });
 
-// Route GET pour récupérer les informations du trip et la liste de ses événements
-router.get("/trips/:tokenTrip", async (req, res) => {
+
+
+// Route GET pour récupérer les informations du Trip et la liste de ses événements
+router.get("/:tokenTrip", async (req, res) => {
+  // On vérifie si les infos obligatoires sont bien renseignées
+  if (!checkBody(req.query, ["token"]) || !checkBody(req.params, ["tokenTrip"])) {
+    return res.status(404).json({ result: false, error: "Missing or empty fields" });
+  }
+  
+  // On récupère les infos du req.param && req.query
+  const token = req.query.token;
   const tokenTrip = req.params.tokenTrip;
-  const token = req.query.tokenSession;
 
-  // Rechercher le trip par rapport au tokenTrip et en populant les données de l'utilisateur
-  const trip = await Trip.findOne({ tokenTrip }).populate("user").populate("participants");
+  try {
+    // On vérifie si l'utilisateur existe, et si oui on renvoie ses infos
+    const user = await checkTokenSession(token);
+    if(!user) {
+      return res.status(404).json({ result: false, error: "User not found" });
+    }
 
-  if (!trip) {
-    return res.status(404).json({ result: false, error: "Voyage non trouvé." });
+    // On cherche le trip correspondant au tokenTrip et en vérifiant que l'utilisateur est soit l'auteur, soit participant
+    // $or operator => https://kb.objectrocket.com/mongo-db/or-in-mongoose-1018
+    const tripFind = await Trip.findOne({
+      tokenTrip,
+      $or: [
+        { 'user': user._id },
+        { 'participants': user._id }
+      ]
+    });
+
+    // Si aucun Trip n'est trouvé, on retourne une erreur
+    if(!tripFind) {
+      return res.status(404).json({ result: false, error: "Trip not found" });
+    }
+
+    // On populate les infos du Trip
+    await tripFind.populate('user');
+    await tripFind.populate('participants');
+    
+    // On récupère la liste de tous les événements associés à ce Trip
+    const eventsFind = await Event.find({ trip: tripFind._id }).populate([
+      { path: "user" },
+      { path: "trip" },
+      { path: "participants" },
+      { path: "infos.user" },
+    ]);
+
+    // On filtre les infos que l'on veut renvoyer en front
+    const tripRes = parseTrip(tripFind);
+    const eventsRes = await Promise.all(eventsFind.map(async event => await parseEvent(event)));
+
+  res.json({ result: true, trip: tripRes, events: eventsRes });
+  } catch (error) {
+    console.error("Erreur lors de la récupération du Trip :", error);
+    res.status(404).json({ result: false, error: "Erreur lors de la récupération du Trip" });
   }
-
-  // Vérifier que l'utilisateur a accès à ce voyage en comparant le token avec celui de l'utilisateur propriétaire ou des participants
-  if (trip.user.tokenSession !== token && !trip.participants.some((participant) => participant.tokenUser === token)) {
-    return res.json({ result: false, error: "Accès non autorisé à ce voyage." });
-  }
-
-  // Récupérer la liste de tous les événements associés à ce trip
-  const events = await Event.find({ trip: trip._id }).populate([
-    { path: "user" },
-    { path: "participants" },
-    { path: "infos.user" },
-  ]);
-
-  res.json({ result: true, trip: trip, events: events });
 });
 
 // Route POST pour ajouter un participant à un trip
