@@ -7,6 +7,8 @@ const logger = require('morgan');
 require('./models/connection');
 const indexRouter = require('./routes/index');
 const usersRouter = require('./routes/users');
+const tripsRouter = require('./routes/trips');
+const eventsRouter = require('./router/events');
 
 const app = express();
 
@@ -21,5 +23,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
+app.use('/trips', tripsRouter);
+app.use('/events', eventsRouter);
 
 module.exports = app;

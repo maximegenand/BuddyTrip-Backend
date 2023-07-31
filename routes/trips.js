@@ -162,7 +162,7 @@ router.delete("/participant", async (req, res) => {
   // Retirer l'utilisateur de la liste des participants du trip
   trip.participants = trip.participants.filter((participant) => participant.tokenUser !== user.tokenUser);
   await trip.save();
-  
+
   // Mettre à jour la référence du trip dans le document de l'utilisateur
   user.trips.pull(trip._id);
   await user.save();
