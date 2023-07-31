@@ -1,5 +1,13 @@
 const mongoose = require('mongoose');
 
+const infosSchema = mongoose.Schema({
+  tokenInfo: String,
+  user: { type: mongoose.Schema.Types.ObjectId, ref: 'users' },
+  name: String,
+  type: String,
+  uri: String,
+});
+
 const eventSchema = mongoose.Schema({
   tokenEvent: String,
   trip: { type: mongoose.Schema.Types.ObjectId, ref: 'trips' },
@@ -12,14 +20,7 @@ const eventSchema = mongoose.Schema({
   timeStart: Date,
   timeEnd: Date,
   seats: Number,
-  travelId: String,
-  infos: [{
-    tokenInfo: String,
-    user: { type: mongoose.Schema.Types.ObjectId, ref: 'users' },
-    name: String,
-    type: String,
-    uri: String,
-  }], 
+  infos: [ infosSchema ], 
 });
 
 const Event = mongoose.model('events', eventSchema);
