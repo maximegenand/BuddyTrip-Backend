@@ -59,6 +59,7 @@ router.post("/", async (req, res) => {
     tokenEvent: uid2(32),
     trip: findTrip._id,
     user: user._id,
+    category: event.category,
     name: event.name,
     date: event.date,
     timeStart: event.timeStart,
