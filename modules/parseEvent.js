@@ -14,7 +14,6 @@ const parseEvent = eventBrut => {
     const { tokenUser, username, picture } = obj;
     return { tokenUser, username, picture };
   });
-  console.log(participants);
 
   const infos = event.infos.map( obj => {
     return {
