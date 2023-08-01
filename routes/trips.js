@@ -126,7 +126,11 @@ router.get("/next", async (req, res) => {
     if(!user) {
       return res.status(404).json({ result: false, error: "User not found" });
     }
-    await user.populate('trips');
+    await user.populate("trips");
+    await user.populate([
+      { path: "trips.user" },
+      { path: "trips.participants" },
+    ]);
 
     // On filtre la date pour afficher seulement les Trip dont la date de fin est égale ou après aujourd'hui
     const tripsBrut = user.trips.filter((trip) => new Date(trip.dateEnd) >= new Date());
