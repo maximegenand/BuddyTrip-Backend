@@ -101,10 +101,10 @@ router.delete("/", async (req, res) => {
 
     // On supprime le Trip
     await Trip.deleteOne({ _id: findTrip._id });
-    res.json({ result: true });
+    return res.json({ result: true });
   } catch (error) {
     console.error("Erreur lors de la suppression du Trip :", error);
-    res.status(404).json({ result: false, error: "Erreur lors de la suppression du Trip" });
+    return res.status(404).json({ result: false, error: "Erreur lors de la suppression du Trip" });
   }
 
   // IL FAUT AJOUTER LA GESTION DE LA SUPPRESSION DU TRIP DANS LA COLLECTION USERS
@@ -122,9 +122,12 @@ router.get("/next", async (req, res) => {
   // On récupère les infos du req.query
   const token = req.query.token;
 
+  console.log('query param', req.query.token);
+
   try {
     // On vérifie si l'utilisateur existe, et si oui on renvoie ses infos
     const user = await checkTokenSession(token);
+    console.log('user', user);
     if(!user) {
       return res.status(404).json({ result: false, error: "User not found" });
     }
@@ -140,10 +143,10 @@ router.get("/next", async (req, res) => {
     // On filtre les infos que l'on veut renvoyer en front
     const trips = tripsBrut.map(trip => parseTrip(trip));
 
-    res.json({ result: true, trips });
+    return res.json({ result: true, trips });
   } catch (error) {
     console.error("Erreur lors de la récupération des Trips :", error);
-    res.status(404).json({ result: false, error: "Erreur lors de la récupération des Trips" });
+    return res.status(404).json({ result: false, error: "Erreur lors de la récupération des Trips" });
   }
 });
 
