@@ -4,6 +4,7 @@ const Trip = require("../models/trips");
 const User = require("../models/users");
 const Event = require("../models/events");
 const uid2 = require("uid2");
+const { format } = require("date-fns")
 
 // Import des fonctions
 const { checkBody } = require('../modules/checkBody');
@@ -11,7 +12,8 @@ const { checkTokenSession, checkTokenUser } = require('../modules/checkUser');
 const { parseTrip } = require("../modules/parseTrip");
 const { parseEvent } = require("../modules/parseEvent");
 
-
+// On récupère la date d'aujourd'hui sans les heures
+const dateNow = new Date(format(new Date(), 'yyyy-MM-dd'));
 
 // Route POST pour créer un trip
 router.post("/", async (req, res) => {
@@ -133,7 +135,7 @@ router.get("/next", async (req, res) => {
     ]);
 
     // On filtre la date pour afficher seulement les Trip dont la date de fin est égale ou après aujourd'hui
-    const tripsBrut = user.trips.filter((trip) => new Date(trip.dateEnd) >= new Date());
+    const tripsBrut = user.trips.filter((trip) => new Date(trip.dateEnd) >= dateNow);
 
     // On filtre les infos que l'on veut renvoyer en front
     const trips = tripsBrut.map(trip => parseTrip(trip));
@@ -166,7 +168,7 @@ router.get("/past", async (req, res) => {
     }
 
     // On filtre la date pour afficher seulement les Trips dont la date de fin est plus ancienne que aujourd'hui
-    const tripsBrut = user.trips.filter((trip) => new Date(trip.dateEnd) < new Date());
+    const tripsBrut = user.trips.filter((trip) => new Date(trip.dateEnd) < dateNow);
 
     // On filtre les infos que l'on veut renvoyer en front
     const trips = tripsBrut.map(trip => parseTrip(trip));
