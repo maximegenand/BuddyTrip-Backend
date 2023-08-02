@@ -1,10 +1,11 @@
 require('dotenv').config();
+require('./models/connection');
 const express = require('express');
 const path = require('path');
 const cookieParser = require('cookie-parser');
 const logger = require('morgan');
 
-require('./models/connection');
+
 const indexRouter = require('./routes/index');
 const usersRouter = require('./routes/users');
 const tripsRouter = require('./routes/trips');
