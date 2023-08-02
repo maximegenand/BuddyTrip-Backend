@@ -46,7 +46,8 @@ router.post("/", async (req, res) => {
   const infos = await Promise.all(event.infos.map(async obj => {
     return {
       tokenInfo: uid2(32),
-      user: await checkTokenUser(obj.tokenUser),
+      //user: await checkTokenUser(obj.tokenUser), <-- on sait que celui qui enregistre est le créateur de l'evenement, pas la peine de check
+      user: user._id,
       name: obj.name,
       type: obj.type,
       uri: obj.uri,
@@ -58,6 +59,7 @@ router.post("/", async (req, res) => {
     tokenEvent: uid2(32),
     trip: findTrip._id,
     user: user._id,
+    category: event.category,
     name: event.name,
     date: event.date,
     timeStart: event.timeStart,
@@ -89,5 +91,47 @@ router.post("/", async (req, res) => {
     res.status(404).json({ result: false, error: "Erreur lors de l'enregistrement de l'Event" });
   }
 });
+
+
+
+// Route DELETE pour supprimer un Event
+router.delete("/", async (req, res) => {
+  // On vérifie si les infos obligatoires sont bien renseignées
+  if (!checkBody(req.body, ["token", "tokenEvent"])) {
+    return res.status(404).json({ result: false, error: "Missing or empty fields" });
+  }
+
+  // On récupère les infos du req.body
+  const { token, tokenEvent } = req.body;
+
+  try {
+    // On vérifie si l'utilisateur existe, et si oui on renvoie ses infos
+    const user = await checkTokenSession(token);
+    if(!user) {
+      return res.status(404).json({ result: false, error: "User not found" });
+    }
+
+    // On recherche un trip suivant le tokenEvent
+    const findEvent = await Event.findOne({ tokenEvent });
+
+    // Si on trouve pas l'Event', on retourne une erreur
+    if (!findEvent) {
+      return res.status(404).json({ result: false, error: "Event not found" });
+    }
+
+    // Si le user n'est pas le créateur de l'Event
+    if (findEvent.user.toString() !== user._id.toString()) {
+      return res.status(404).json({ result: false, error: "Not allowed" });
+    }
+
+    // On supprime l'event'
+    await Event.deleteOne({ _id: findEvent._id });
+    res.json({ result: true });
+  } catch (error) {
+    console.error("Erreur lors de la suppression de l'Event :", error);
+    res.status(404).json({ result: false, error: "Erreur lors de la suppression de l'Event" });
+  }
+});
+
 
 module.exports = router;

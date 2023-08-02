@@ -10,6 +10,7 @@ const infosSchema = mongoose.Schema({
 
 const eventSchema = mongoose.Schema({
   tokenEvent: String,
+  category: String,
   trip: { type: mongoose.Schema.Types.ObjectId, ref: 'trips' },
   user: { type: mongoose.Schema.Types.ObjectId, ref: 'users' },
   participants: [{ type: mongoose.Schema.Types.ObjectId, ref: 'users' }],
