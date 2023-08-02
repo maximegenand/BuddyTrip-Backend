@@ -18,9 +18,9 @@ const dateNow = new Date(format(new Date(), "yyyy-MM-dd"));
 // Route POST pour créer un trip
 router.post("/", async (req, res) => {
   // On vérifie si les infos obligatoires sont bien renseignées
-  // if (!checkBody(req.body, ["token", "trip"])) {
-  //   return res.status(404).json({ result: false, error: "Missing or empty fields" });
-  // }
+  if (!checkBody(req.body, ["token", "trip"])) {
+    return res.status(404).json({ result: false, error: "Missing or empty fields" });
+  }
 
   // On récupère les infos du req.body
   const token = req.body.token;
