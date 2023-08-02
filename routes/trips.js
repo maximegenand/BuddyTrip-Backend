@@ -69,6 +69,51 @@ router.post("/", async (req, res) => {
 
 
 
+// Route PUT pour update un trip
+router.put("/", async (req, res) => {
+  // On vérifie si les infos obligatoires sont bien renseignées
+  if (!checkBody(req.body, ["token", "trip"])) {
+    return res.status(404).json({ result: false, error: "Missing or empty fields" });
+  }
+
+  // On récupère les infos du req.body
+  const token = req.body.token;
+  const { tokenTrip, name, dateStart, dateEnd, description } = req.body.trip;
+
+  try {
+    // On vérifie si l'utilisateur existe, et si oui on renvoie ses infos
+    const user = await checkTokenSession(token);
+    if(!user) {
+      return res.status(404).json({ result: false, error: "User not found" });
+    }
+
+    // On recherche un trip suivant le tokenTrip
+    const findTrip = await Trip.findOne({ tokenTrip });
+
+    // Si on trouve pas le trip, on retourne une erreur
+    if (!findTrip) {
+      return res.status(404).json({ result: false, error: "Trip not found" });
+    }
+
+    // Si le user n'est pas propriétaire du trip
+    if (findTrip.user.toString() !== user._id.toString()) {
+      return res.status(404).json({ result: false, error: "Not allowed" });
+    }
+
+    // On update le Trip
+    const update = await Trip.updateOne({ _id: findTrip._id }, { name, dateStart, dateEnd, description });
+    // Si on n'a pas pu modifier
+    return res.json({ result: true });
+  } catch (error) {
+    console.error("Erreur lors de l'update du Trip :", error);
+    return res.status(404).json({ result: false, error: "Erreur lors de l'update du Trip" });
+  }
+
+  // IL FAUT AJOUTER LA GESTION DE L'EXISTANCE DES INPUTS ET MODIFIER LES INFOS RENVOYEES SI TRUE
+});
+
+
+
 // Route DELETE pour supprimer un Trip
 router.delete("/", async (req, res) => {
   // On vérifie si les infos obligatoires sont bien renseignées
