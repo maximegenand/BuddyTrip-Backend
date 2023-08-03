@@ -4,7 +4,7 @@ const parseEvent = eventBrut => {
   const event = eventBrut.toJSON();
 
   // On récupère seulement les infos qu'on veut renvoyer
-  const { tokenEvent, category, name, date, timeStart, timeEnd, place, description, seats } = event;
+  const { tokenEvent, category, name, date, timeStart, timeEnd, place, description, seats, ticket } = event;
 
   const user = { tokenUser: event.user.tokenUser, username: event.user.username };
 
@@ -36,6 +36,7 @@ const parseEvent = eventBrut => {
     place,
     description,
     seats,
+    ticket,
     user,
     participants,
     infos,

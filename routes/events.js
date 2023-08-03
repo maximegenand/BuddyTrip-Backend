@@ -66,6 +66,7 @@ router.post("/", async (req, res) => {
     timeEnd: event.timeEnd,
     place: event.place,
     seats: event.seats,
+    ticket: event.ticket,
     description: event.description,
     participants: [user._id],
     infos,

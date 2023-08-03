@@ -21,6 +21,7 @@ const eventSchema = mongoose.Schema({
   timeStart: Date,
   timeEnd: Date,
   seats: Number,
+  ticket: String,
   infos: [ infosSchema ], 
 });
 
