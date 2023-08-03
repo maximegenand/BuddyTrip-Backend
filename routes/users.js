@@ -50,17 +50,17 @@ router.post('/signin', async (req, res) => {
     return res.json({ result: false, error: 'Missing or empty fields' });
   }
 
-  // Vérifier si l'utilisateur est déjà enregistré
-  const user = await User.findOne({ username: req.body.username });
+  // Vérifier si l'utilisateur est déjà enregistré (email insensible à la casse ) et qu'il est actif
+  const user = await User.findOne({ email: { '$regex': req.body.email, $options: 'i' }, active: true });
 
   if (user && bcrypt.compareSync(req.body.password, user.password)) {
     res.json({
       result: true,
       user: {
-        tokenSession: user.tokenSession,
-        tokenUser: user.tokenUser,
+        token: user.tokenSession,
         username: user.username,
         email: user.email,
+        image: user.image,
       },
     });
   } else {

@@ -8,6 +8,7 @@ const userSchema = mongoose.Schema({
   password: String,
   friends: [{ type: mongoose.Schema.Types.ObjectId, ref: 'users' }],
   trips: [{ type: mongoose.Schema.Types.ObjectId, ref: 'trips' }],
+  image: String,
   active: Boolean,
   documents: [{
     tokenDocument: String,
