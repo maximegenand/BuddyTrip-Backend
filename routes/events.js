@@ -41,7 +41,7 @@ router.post("/", async (req, res) => {
   if(!user.trips.includes(findTrip._id)) {
     return res.status(404).json({ result: false, error: "Not allowed" });
   }
-
+/*
   // On transforme les infos supplémentaires pour pouvoir l'enregistrer
   const infos = await Promise.all(event.infos.map(async obj => {
     return {
@@ -53,7 +53,7 @@ router.post("/", async (req, res) => {
       uri: obj.uri,
     }
   }));
-
+*/
   // On créé un nouveau Event
   const newEvent = new Event({
     tokenEvent: uid2(32),
@@ -69,7 +69,7 @@ router.post("/", async (req, res) => {
     ticket: event.ticket,
     description: event.description,
     participants: [user._id],
-    infos,
+    infos : [],
   });
 
   try {
