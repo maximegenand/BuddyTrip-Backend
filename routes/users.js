@@ -1,10 +1,18 @@
 var express = require('express');
 var router = express.Router();
-
 const User = require('../models/users');
-const { checkBody } = require('../modules/checkBody');
-const uid2 = require('uid2');
 const bcrypt = require('bcrypt');
+const uid2 = require('uid2');
+const { format } = require("date-fns");
+
+
+// Import des fonctions
+const { checkBody } = require('../modules/checkBody');
+const { parseTrip } = require("../modules/parseTrip");
+
+
+// On récupère la date d'aujourd'hui sans les heures
+const dateNow = new Date(format(new Date(), "yyyy-MM-dd"));
 
 // Route pour l'inscription (signup)
 router.post('/signup', async (req, res) => {
@@ -54,7 +62,16 @@ router.post('/signin', async (req, res) => {
   const user = await User.findOne({ email: { '$regex': req.body.email, $options: 'i' }, active: true });
 
   if (user && bcrypt.compareSync(req.body.password, user.password)) {
-    res.json({
+    await user.populate("trips");
+    await user.populate([{ path: "trips.user" }, { path: "trips.participants" }]);
+
+    // On filtre la date pour afficher seulement les Trip dont la date de fin est égale ou après aujourd'hui
+    const tripsBrut = user.trips.filter((trip) => new Date(trip.dateEnd) >= dateNow);
+
+    // On filtre les infos que l'on veut renvoyer en front
+    const trips = tripsBrut.map((trip) => parseTrip(trip));
+
+    return res.json({
       result: true,
       user: {
         token: user.tokenSession,
@@ -62,6 +79,7 @@ router.post('/signin', async (req, res) => {
         email: user.email,
         image: user.image,
       },
+      trips,
     });
   } else {
     res.json({ result: false, error: 'User not found or wrong password' });
