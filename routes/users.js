@@ -20,12 +20,28 @@ router.post('/signup', async (req, res) => {
     return res.json({ result: false, error: 'Missing or empty fields' });
   }
 
-  // Check if the user has not already been registered
-  const existingUser = await User.findOne({ username: req.body.username });
-
-  if (!existingUser) {
+  // On vérifie que l'utilisateur n'est pas déjà enregistré
+  const existingUser = await User.findOne({ email: { '$regex': req.body.email, $options: 'i' } });
+  // Si l'utilisateur est déjà enregistré et qu'il est active, on renvoie une erreur
+  let savedUser = {};
+  if (existingUser && existingUser.active) {
+    return res.json({ result: false, error: 'This email address already exists' });
+  }
+  // Si l'utilisateur est enregistré mais non actif (il a été ajouté par un ami)
+  else if (existingUser && !existingUser.active) {
     const hash = bcrypt.hashSync(req.body.password, 10);
-
+    const updateUser = {
+      tokenSession: uid2(32),
+      username: req.body.username,
+      email: req.body.email,
+      password: hash,
+      active: true,
+    }
+    savedUser = await User.findByIdAndUpdate(existingUser._id, { ...updateUser });
+  }
+  // Si l'utilisateur est nouveau
+  else {
+    const hash = bcrypt.hashSync(req.body.password, 10);
     const newUser = new User({
       tokenUser: uid2(32),
       tokenSession: uid2(32),
@@ -34,22 +50,27 @@ router.post('/signup', async (req, res) => {
       password: hash,
       active: true,
     });
-
-    const savedUser = await newUser.save();
-
-    res.json({
-      result: true,
-      user: {
-        tokenSession: savedUser.tokenSession,
-        tokenUser: savedUser.tokenUser,
-        username: savedUser.username,
-        email: savedUser.email,
-      },
-    });
-  } else {
-    // User already exists in database
-    res.json({ result: false, error: 'User already exists' });
+    savedUser = await newUser.save();
   }
+  await savedUser.populate("trips");
+  await savedUser.populate([{ path: "trips.user" }, { path: "trips.participants" }]);
+
+  // On filtre la date pour afficher seulement les Trip dont la date de fin est égale ou après aujourd'hui
+  const tripsBrut = savedUser.trips.filter((trip) => new Date(trip.dateEnd) >= dateNow);
+
+  // On filtre les infos que l'on veut renvoyer en front
+  const trips = tripsBrut.map((trip) => parseTrip(trip));
+
+  return res.json({
+    result: true,
+    user: {
+      token: savedUser.tokenSession,
+      username: savedUser.username,
+      email: savedUser.email,
+      image: savedUser.image,
+    },
+    trips,
+  });
 });
 
 // Route pour la connexion (signin)
