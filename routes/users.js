@@ -8,6 +8,7 @@ const { format } = require("date-fns");
 
 // Import des fonctions
 const { checkBody } = require('../modules/checkBody');
+const { checkTokenSession } = require('../modules/checkUser');
 const { parseTrip } = require("../modules/parseTrip");
 
 
@@ -107,6 +108,26 @@ router.post('/signin', async (req, res) => {
   } else {
     res.json({ result: false, error: 'User not found or wrong password' });
   }
+});
+
+// Route pour la liste des users (sauf celui qui fait la requête)
+router.get('/list', async (req, res) => {
+  // On vérifie si les infos obligatoires sont bien renseignées
+  if (!checkBody(req.query, ["token"])) {
+    return res.status(404).json({ result: false, error: "Missing or empty fields" });
+  }
+
+  // On vérifie si l'utilisateur existe, et si oui on renvoie ses infos
+  const user = await checkTokenSession(req.query.token);
+  if (!user) {
+    return res.status(404).json({ result: false, error: "User not found" });
+  }
+
+  // On récupère les données de tous les users sauf celui qui fait la requête
+  const findUsers = await User.find({'_id': {$ne: user._id}});
+  // On filtre les données que l'on veut renvoyer
+  const users = findUsers.map(user => { return {tokenUser: user.tokenUser, username: user.username, email: user.email}})
+  res.json({users});
 });
 
 module.exports = router;
