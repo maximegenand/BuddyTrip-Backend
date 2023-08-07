@@ -4,7 +4,7 @@ const User = require("../models/users");
 const checkTokenSession = async token => {
   console.log('token', token)
   const findUser = await User.findOne({ tokenSession: token });
-  console.log('findUser', findUser);
+  //console.log('findUser', findUser);
   if(!findUser) {
     return false;
   }
