@@ -65,6 +65,7 @@ router.post('/signup', async (req, res) => {
     result: true,
     user: {
       token: savedUser.tokenSession,
+      tokenUser: savedUser.tokenUser,
       username: savedUser.username,
       email: savedUser.email,
       image: savedUser.image,
@@ -96,6 +97,7 @@ router.post('/signin', async (req, res) => {
       result: true,
       user: {
         token: user.tokenSession,
+        tokenUser: user.tokenUser,
         username: user.username,
         email: user.email,
         image: user.image,
