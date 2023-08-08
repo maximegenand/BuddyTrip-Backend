@@ -123,7 +123,7 @@ router.delete("/", async (req, res) => {
   const { token, tokenTrip } = req.body;
 
   try {
-    // On vérifie si l'utilisateur existe, et si oui on renvoie ses infos
+    // On vérifie si l'utilisateur existe
     const user = await checkTokenSession(token);
     if (!user) {
       return res.status(404).json({ result: false, error: "User not found" });
@@ -142,15 +142,32 @@ router.delete("/", async (req, res) => {
       return res.status(404).json({ result: false, error: "Not allowed" });
     }
 
-    // On supprime le Trip
+    // On update les users présent dans le trip
+    const participants = [...findTrip.participants]; // On prend tous les id présents dans la key participants du trip
+    participants.push(findTrip.user); // On rajoute l'id de l'admin
+
+    await User.updateMany(
+      { _id: { $in: participants } },
+      { $pull: { trips: findTrip._id } } // On supprime l'id du trip dans chaque key "trips" des users
+    );
+
+    // On recherche tous les events suivant le tripId
+    const findEvents = await Event.find({ trip: findTrip._id });
+    // Si on trouve pas d'events, on retourne une erreur
+
+    // On récupère tous les IDs des événements à supprimer
+    const eventIdsToDelete = findEvents.map((event) => event._id);
+
+    // On supprime tous les événements dont l'ID est présent dans le tableau eventIdsToDelete
+    await Event.deleteMany({ _id: { $in: eventIdsToDelete } });
+
+    // On fini par supprimer le Trip
     await Trip.deleteOne({ _id: findTrip._id });
     return res.json({ result: true });
   } catch (error) {
     console.error("Erreur lors de la suppression du Trip :", error);
     return res.status(404).json({ result: false, error: "Erreur lors de la suppression du Trip" });
   }
-
-  // IL FAUT AJOUTER LA GESTION DE LA SUPPRESSION DU TRIP DANS LA COLLECTION USERS
 });
 
 // Route GET pour récupérer les nouveaux Trips
@@ -325,19 +342,68 @@ router.delete("/participant", async (req, res) => {
   }
 
   // Vérifier si l'utilisateur est un participant du trip
-  const isParticipant = trip.participants.some((participant) => participant.tokenUser === user.tokenUser);
+  const isParticipant = trip.participants.some((participant) => participant.tokenUser === user._id);
   if (!isParticipant) {
     return res.json({ result: false, error: "L'utilisateur n'est pas un participant de ce voyage." });
   }
 
   // Retirer l'utilisateur de la liste des participants du trip
-  trip.participants = trip.participants.filter((participant) => participant.tokenUser !== user.tokenUser);
+  trip.participants = trip.participants.filter((participant) => participant.tokenUser !== user._id);
   await trip.save();
 
   // Mettre à jour la référence du trip dans le document de l'utilisateur
   user.trips.pull(trip._id);
   await user.save();
 
+  res.json({ result: true, trip: trip });
+});
+
+// Route DELETE pour quitter un groupe
+router.delete("/quit", async (req, res) => {
+  const { tokenSession, tokenTrip } = req.body;
+
+  // Rechercher l'utilisateur par rapport au tokenSession
+  const user = await User.findOne({ tokenSession });
+
+  if (!user) {
+    return res.status(404).json({ result: false, error: "Utilisateur non trouvé." });
+  }
+
+  // Rechercher le trip par rapport au tokenTrip
+  const trip = await Trip.findOne({ tokenTrip });
+
+  if (!trip) {
+    return res.status(404).json({ result: false, error: "Voyage non trouvé." });
+  }
+
+  // Vérification si l'utilisateur est l'administrateur du voyage
+  if (user._id === trip.user) {
+    // Si l'utilisateur est l'admin, transférer le rôle d'admin au premier participant
+    if (trip.participants.length > 0) {
+      trip.user = trip.participants[0];
+    } else {
+      // Si aucun participant, supprimer le voyage
+      await Trip.deleteOne({ _id: trip._id });
+      // Retirer le voyage de la liste des voyages de l'utilisateur
+      user.trips.pull(trip._id);
+      await user.save();
+      return res.json({ result: true, message: "L'administrateur a quitté le voyage et le voyage a été supprimé." });
+    }
+  } else {
+    // Vérification si l'utilisateur est un participant du voyage
+    const isParticipant = trip.participants.some((participant) => participant.equals(user._id));
+
+    if (!isParticipant) {
+      return res.json({ result: false, error: "L'utilisateur n'est ni admin ni participant de ce voyage." });
+    } else {
+      // Retirer l'utilisateur de la liste des participants
+      trip.participants = trip.participants.filter((participant) => !participant.equals(user._id));
+    }
+    await trip.save();
+    // Retirer le voyage de la liste des voyages de l'utilisateur
+    user.trips.pull(trip._id);
+    await user.save();
+  }
   res.json({ result: true, trip: trip });
 });
 
