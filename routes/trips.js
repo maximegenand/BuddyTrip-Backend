@@ -400,8 +400,6 @@ router.delete("/quit", async (req, res) => {
       } else {
         // Si aucun participant, supprimer le voyage
         await Trip.deleteOne({ _id: trip._id });
-        // Retirer le voyage de la liste des voyages de l'utilisateur en base de données
-        await User.updateOne({ _id: user._id }, { $pull: { trips: trip._id } });
         return res.json({ result: true, message: "L'administrateur a quitté le voyage et le voyage a été supprimé." });
       }
     } else {
@@ -419,10 +417,10 @@ router.delete("/quit", async (req, res) => {
             $pull: { participants: user._id },
           }
         );
-        // Retirer le voyage de la liste des voyages de l'utilisateur en base de données
-        await User.updateOne({ _id: user._id }, { $pull: { trips: trip._id } });
       }
     }
+    // Retirer le voyage de la liste des voyages de l'utilisateur en base de données
+    await User.updateOne({ _id: user._id }, { $pull: { trips: trip._id } });
     res.json({ result: true, message: "Le participant a quitté le voyage" });
   } catch (error) {
     console.error("Erreur pour quitter le Trip :", error);
