@@ -168,4 +168,99 @@ router.delete("/allEvents", async (req, res) => {
 });
 
 
+// Route POST pour s'ajouter à un événement
+router.post("/participant", async (req, res) => {
+  // On vérifie si les infos obligatoires sont bien renseignées
+  if (!checkBody(req.body, ["token", "tokenEvent"])) {
+    return res.status(404).json({ result: false, error: "Missing or empty fields" });
+  }
+
+  // On récupère les infos du req.body
+  const { token, tokenEvent } = req.body;
+
+  // On vérifie si l'utilisateur existe, et si oui on renvoie ses infos
+  const user = await checkTokenSession(token);
+  if (!user) {
+    return res.status(404).json({ result: false, error: "User not found" });
+  }
+
+  // On recherche un event suivant le tokenEvent
+  const findEvent = await Event.findOne({ tokenEvent });
+  
+  // Si on trouve pas l'event, ou que le user ne participe pas au Trip, on retourne une erreur
+  if (!findEvent || !user.trips.includes(findEvent.trip)) {
+    return res.status(404).json({ result: false, error: "Event not found" });
+  }
+
+  // Si le user est le créateur de l'évènement ou qu'il y participe déjà, on retourne une erreur
+  if (user._id === findEvent.user || findEvent.participants.includes(user._id)) {
+    return res.status(404).json({ result: false, error: "User already added" });
+  }
+
+  try {
+    // On ajoute l'utilisateur à la liste des participants de l'event
+    findEvent.participants.push(user._id);
+    await findEvent.save();
+
+    // On populate les infos de l'Event
+    await findEvent.populate([{ path: "user" }, { path: "trip" }, { path: "participants" }, { path: "infos.user" }]);
+
+    // On filtre les infos que l'on veut renvoyer en front
+    const eventRes = parseEvent(findEvent);
+    res.json({ result: true, event: eventRes });
+  } catch (error) {
+    console.error("Erreur lors de l'enregistrement de l'Event :", error);
+    res.status(404).json({ result: false, error: "Erreur lors de l'enregistrement de l'Event" });
+  }
+});
+
+
+// Route POST pour s'enlever d'un événement
+router.delete("/participant", async (req, res) => {
+  // On vérifie si les infos obligatoires sont bien renseignées
+  if (!checkBody(req.body, ["token", "tokenEvent"])) {
+    return res.status(404).json({ result: false, error: "Missing or empty fields" });
+  }
+
+  // On récupère les infos du req.body
+  const { token, tokenEvent } = req.body;
+
+  // On vérifie si l'utilisateur existe, et si oui on renvoie ses infos
+  const user = await checkTokenSession(token);
+  if (!user) {
+    return res.status(404).json({ result: false, error: "User not found" });
+  }
+
+  // On recherche un event suivant le tokenEvent
+  const findEvent = await Event.findOne({ tokenEvent });
+  
+  // Si on trouve pas l'event, ou que le user ne participe pas au Trip, on retourne une erreur
+  if (!findEvent || !user.trips.includes(findEvent.trip)) {
+    return res.status(404).json({ result: false, error: "Event not found" });
+  }
+
+  // Si le user est le créateur de l'évènement ou qu'il n'y participe pas, on retourne une erreur
+  if (user._id === findEvent.user || !findEvent.participants.includes(user._id)) {
+    return res.status(404).json({ result: false, error: "User can not be removed" });
+  }
+
+  try {
+    // On supprime l'utilisateur à la liste des participants de l'event
+    const userIndex = findEvent.participants.indexOf(user._id);
+    findEvent.participants.splice(userIndex, 1);
+    await findEvent.save();
+
+    // On populate les infos de l'Event
+    await findEvent.populate([{ path: "user" }, { path: "trip" }, { path: "participants" }, { path: "infos.user" }]);
+
+    // On filtre les infos que l'on veut renvoyer en front
+    const eventRes = parseEvent(findEvent);
+    res.json({ result: true, event: eventRes });
+  } catch (error) {
+    console.error("Erreur lors de l'enregistrement de l'Event :", error);
+    res.status(404).json({ result: false, error: "Erreur lors de l'enregistrement de l'Event" });
+  }
+});
+
+
 module.exports = router;
