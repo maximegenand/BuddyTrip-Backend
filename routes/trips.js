@@ -177,6 +177,7 @@ router.get("/next", async (req, res) => {
     return res.status(404).json({ result: false, error: "Missing or empty fields" });
   }
 
+  
   // On récupère les infos du req.query
   const token = req.query.token;
 

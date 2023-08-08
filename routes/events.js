@@ -127,6 +127,7 @@ router.delete("/", async (req, res) => {
   }
 });
 
+
 // Route DELETE pour supprimer tous les Events d'un trip
 router.delete("/allEvents", async (req, res) => {
   // On vérifie si les infos obligatoires sont bien renseignées
