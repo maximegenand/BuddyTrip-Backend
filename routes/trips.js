@@ -57,7 +57,7 @@ router.post("/", async (req, res) => {
     await user.save();
     // Lier le nouveau voyage aux participants
     await User.updateMany(
-      { _id: { $in: participants }},
+      { _id: { $in: participants } },
       { $push: { trips: newTrip._id } } // On ajoute l'id du trip dans le tableau du user
     );
 
@@ -158,13 +158,12 @@ router.delete("/", async (req, res) => {
 
     // On recherche tous les events suivant le tripId
     const findEvents = await Event.find({ trip: findTrip._id });
-    // Si on trouve pas d'events, on retourne une erreur
-
-    // On récupère tous les IDs des événements à supprimer
-    const eventIdsToDelete = findEvents.map((event) => event._id);
-
-    // On supprime tous les événements dont l'ID est présent dans le tableau eventIdsToDelete
-    await Event.deleteMany({ _id: { $in: eventIdsToDelete } });
+    if (findEvents && findEvents.length > 0) {
+      // On récupère tous les IDs des événements à supprimer
+      const eventIdsToDelete = findEvents.map((event) => event._id);
+      // On supprime tous les événements dont l'ID est présent dans le tableau eventIdsToDelete
+      await Event.deleteMany({ _id: { $in: eventIdsToDelete } });
+    }
 
     // On fini par supprimer le Trip
     await Trip.deleteOne({ _id: findTrip._id });
@@ -182,7 +181,6 @@ router.get("/next", async (req, res) => {
     return res.status(404).json({ result: false, error: "Missing or empty fields" });
   }
 
-  
   // On récupère les infos du req.query
   const token = req.query.token;
 
@@ -366,51 +364,70 @@ router.delete("/participant", async (req, res) => {
 
 // Route DELETE pour quitter un groupe
 router.delete("/quit", async (req, res) => {
-  const { tokenSession, tokenTrip } = req.body;
-
-  // Rechercher l'utilisateur par rapport au tokenSession
-  const user = await User.findOne({ tokenSession });
-
-  if (!user) {
-    return res.status(404).json({ result: false, error: "Utilisateur non trouvé." });
+  // On vérifie si les infos obligatoires sont bien renseignées
+  if (!checkBody(req.body, ["token", "tokenTrip"])) {
+    return res.status(404).json({ result: false, error: "Missing or empty fields" });
   }
 
-  // Rechercher le trip par rapport au tokenTrip
-  const trip = await Trip.findOne({ tokenTrip });
+  // On récupère les infos du req.body
+  const { token, tokenTrip } = req.body;
 
-  if (!trip) {
-    return res.status(404).json({ result: false, error: "Voyage non trouvé." });
-  }
-
-  // Vérification si l'utilisateur est l'administrateur du voyage
-  if (user._id === trip.user) {
-    // Si l'utilisateur est l'admin, transférer le rôle d'admin au premier participant
-    if (trip.participants.length > 0) {
-      trip.user = trip.participants[0];
-    } else {
-      // Si aucun participant, supprimer le voyage
-      await Trip.deleteOne({ _id: trip._id });
-      // Retirer le voyage de la liste des voyages de l'utilisateur
-      user.trips.pull(trip._id);
-      await user.save();
-      return res.json({ result: true, message: "L'administrateur a quitté le voyage et le voyage a été supprimé." });
+  try {
+    // On vérifie si l'utilisateur existe
+    const user = await checkTokenSession(token);
+    if (!user) {
+      return res.status(404).json({ result: false, error: "User not found" });
     }
-  } else {
-    // Vérification si l'utilisateur est un participant du voyage
-    const isParticipant = trip.participants.some((participant) => participant.equals(user._id));
+    // Rechercher le trip par rapport au tokenTrip
+    const trip = await Trip.findOne({ tokenTrip });
 
-    if (!isParticipant) {
-      return res.json({ result: false, error: "L'utilisateur n'est ni admin ni participant de ce voyage." });
-    } else {
-      // Retirer l'utilisateur de la liste des participants
-      trip.participants = trip.participants.filter((participant) => !participant.equals(user._id));
+    if (!trip) {
+      return res.status(404).json({ result: false, error: "Voyage non trouvé." });
     }
-    await trip.save();
-    // Retirer le voyage de la liste des voyages de l'utilisateur
-    user.trips.pull(trip._id);
-    await user.save();
+
+    // Vérification si l'utilisateur est l'admin du voyage
+    if (user._id === trip.user) {
+      // Si l'utilisateur est l'admin, transférer le rôle d'admin au premier participant
+      if (trip.participants.length > 0) {
+        // Mettre à jour le document Trip avec les nouvelles valeurs
+        await Trip.updateOne(
+          { _id: trip._id },
+          {
+            $set: { user: trip.participants[0] },
+            $pull: { participants: trip.participants[0] },
+          }
+        );
+      } else {
+        // Si aucun participant, supprimer le voyage
+        await Trip.deleteOne({ _id: trip._id });
+        // Retirer le voyage de la liste des voyages de l'utilisateur en base de données
+        await User.updateOne({ _id: user._id }, { $pull: { trips: trip._id } });
+        return res.json({ result: true, message: "L'administrateur a quitté le voyage et le voyage a été supprimé." });
+      }
+    } else {
+      // Vérification si l'utilisateur est un participant du voyage
+      const isParticipant = trip.participants.some((participant) => participant.equals(user._id));
+
+      if (!isParticipant) {
+        return res.json({ result: false, error: "L'utilisateur n'est ni admin ni participant de ce voyage." });
+      } else {
+        // Retirer l'utilisateur de la liste des participants
+        trip.participants = trip.participants.filter((participant) => !participant.equals(user._id));
+        await Trip.updateOne(
+          { _id: trip._id },
+          {
+            $pull: { participants: user._id },
+          }
+        );
+        // Retirer le voyage de la liste des voyages de l'utilisateur en base de données
+        await User.updateOne({ _id: user._id }, { $pull: { trips: trip._id } });
+      }
+    }
+    res.json({ result: true, message: "Le participant a quitté le voyage" });
+  } catch (error) {
+    console.error("Erreur pour quitter le Trip :", error);
+    return res.status(404).json({ result: false, error: "Erreur pour quitter le Trip" });
   }
-  res.json({ result: true, trip: trip });
 });
 
 module.exports = router;
