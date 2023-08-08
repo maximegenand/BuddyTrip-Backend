@@ -55,6 +55,11 @@ router.post("/", async (req, res) => {
     // Lier le nouveau voyage à l'utilisateur qui l'a créé
     user.trips.push(newTrip._id); // Ajoute directement le nouveau voyage au tableau trips de l'utilisateur
     await user.save();
+    // Lier le nouveau voyage aux participants
+    await User.updateMany(
+      { _id: { $in: participants }},
+      { $push: { trips: newTrip._id } } // On ajoute l'id du trip dans le tableau du user
+    );
 
     // On populate les infos du Trip
     await newTrip.populate("user");
