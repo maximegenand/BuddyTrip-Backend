@@ -39,21 +39,19 @@ router.post("/", async (req, res) => {
   if (!user.trips.includes(findTrip._id)) {
     return res.status(404).json({ result: false, error: "Not allowed" });
   }
-
+/*
   // On transforme les infos supplémentaires pour pouvoir l'enregistrer
-  const infos = await Promise.all(
-    event.infos.map(async (obj) => {
-      return {
-        tokenInfo: uid2(32),
-        //user: await checkTokenUser(obj.tokenUser), <-- on sait que celui qui enregistre est le créateur de l'evenement, pas la peine de check
-        user: user._id,
-        name: obj.name,
-        type: obj.type,
-        uri: obj.uri,
-      };
-    })
-  );
-
+  const infos = await Promise.all(event.infos.map(async obj => {
+    return {
+      tokenInfo: uid2(32),
+      //user: await checkTokenUser(obj.tokenUser), <-- on sait que celui qui enregistre est le créateur de l'evenement, pas la peine de check
+      user: user._id,
+      name: obj.name,
+      type: obj.type,
+      uri: obj.uri,
+    }
+  }));
+*/
   // On créé un nouveau Event
   const newEvent = new Event({
     tokenEvent: uid2(32),
@@ -69,7 +67,7 @@ router.post("/", async (req, res) => {
     ticket: event.ticket,
     description: event.description,
     participants: [user._id],
-    infos,
+    infos : [],
   });
 
   try {
