@@ -386,7 +386,7 @@ router.delete("/quit", async (req, res) => {
     }
 
     // Vérification si l'utilisateur est l'admin du voyage
-    if (user._id === trip.user) {
+    if (user._id.toString() === trip.user.toString()) {
       // Si l'utilisateur est l'admin, transférer le rôle d'admin au premier participant
       if (trip.participants.length > 0) {
         // Mettre à jour le document Trip avec les nouvelles valeurs
