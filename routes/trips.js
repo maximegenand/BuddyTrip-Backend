@@ -23,8 +23,7 @@ router.post("/", async (req, res) => {
   }
 
   // On récupère les infos du req.body
-  const token = req.body.token;
-  const trip = req.body.trip;
+  const { token, trip } = req.body;
 
   // On vérifie si l'utilisateur existe, et si oui on renvoie ses infos
   const user = await checkTokenSession(token);
@@ -52,9 +51,8 @@ router.post("/", async (req, res) => {
     // On enregistre le Trip
     await newTrip.save();
 
-    // Lier le nouveau voyage à l'utilisateur qui l'a créé
-    user.trips.push(newTrip._id); // Ajoute directement le nouveau voyage au tableau trips de l'utilisateur
-    await user.save();
+    // Ajoute le nouveau voyage au tableau trips de l'utilisateur
+    await User.updateOne({ _id: user._id }, { $push: { trips: newTrip._id } });
     // Lier le nouveau voyage aux participants
     await User.updateMany(
       { _id: { $in: participants } },
@@ -93,21 +91,21 @@ router.put("/", async (req, res) => {
     }
 
     // On recherche un trip suivant le tokenTrip
-    const findTrip = await Trip.findOne({ tokenTrip });
+    const trip = await Trip.findOne({ tokenTrip });
 
     // Si on trouve pas le trip, on retourne une erreur
-    if (!findTrip) {
+    if (!trip) {
       return res.status(404).json({ result: false, error: "Trip not found" });
     }
 
     // Si le user n'est pas propriétaire du trip
-    if (findTrip.user.toString() !== user._id.toString()) {
+    if (trip.user.toString() !== user._id.toString()) {
       return res.status(404).json({ result: false, error: "Not allowed" });
     }
 
     // On update le Trip
-    const update = await Trip.updateOne({ _id: findTrip._id }, { name, dateStart, dateEnd, description });
-    // Si on n'a pas pu modifier
+    const update = await Trip.updateOne({ _id: trip._id }, { name, dateStart, dateEnd, description });
+
     return res.json({ result: true });
   } catch (error) {
     console.error("Erreur lors de l'update du Trip :", error);
