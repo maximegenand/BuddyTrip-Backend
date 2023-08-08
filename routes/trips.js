@@ -57,7 +57,7 @@ router.post("/", async (req, res) => {
     await user.save();
     // Lier le nouveau voyage aux participants
     await User.updateMany(
-      { _id: { $in: participants }},
+      { _id: { $in: participants } },
       { $push: { trips: newTrip._id } } // On ajoute l'id du trip dans le tableau du user
     );
 
@@ -158,13 +158,12 @@ router.delete("/", async (req, res) => {
 
     // On recherche tous les events suivant le tripId
     const findEvents = await Event.find({ trip: findTrip._id });
-    // Si on trouve pas d'events, on retourne une erreur
-
-    // On récupère tous les IDs des événements à supprimer
-    const eventIdsToDelete = findEvents.map((event) => event._id);
-
-    // On supprime tous les événements dont l'ID est présent dans le tableau eventIdsToDelete
-    await Event.deleteMany({ _id: { $in: eventIdsToDelete } });
+    if (findEvents && findEvents.length > 0) {
+      // On récupère tous les IDs des événements à supprimer
+      const eventIdsToDelete = findEvents.map((event) => event._id);
+      // On supprime tous les événements dont l'ID est présent dans le tableau eventIdsToDelete
+      await Event.deleteMany({ _id: { $in: eventIdsToDelete } });
+    }
 
     // On fini par supprimer le Trip
     await Trip.deleteOne({ _id: findTrip._id });
@@ -182,7 +181,6 @@ router.get("/next", async (req, res) => {
     return res.status(404).json({ result: false, error: "Missing or empty fields" });
   }
 
-  
   // On récupère les infos du req.query
   const token = req.query.token;
 
