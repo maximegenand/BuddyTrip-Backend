@@ -110,15 +110,19 @@ router.put("/", async (req, res) => {
     }
 
     // On update l'event
-    const update = await Event.findOneAndUpdate({ _id: findEvent._id }, { category, name, date, timeStart, timeEnd, place, seats, ticket, description });
-    // Si on n'a pas pu modifier
-    return res.json({ result: true, update });
+    const updateEvent = await Event.findOneAndUpdate({ _id: findEvent._id }, { category, name, date, timeStart, timeEnd, place, seats, ticket, description }, { new: true });
+
+    // On populate les infos de l'Event
+    await updateEvent.populate([{ path: "user" }, { path: "trip" }, { path: "participants" }, { path: "infos.user" }]);
+
+    // On filtre les infos que l'on veut renvoyer en front
+    const eventRes = parseEvent(updateEvent);
+
+    return res.json({ result: true, event: eventRes });
   } catch (error) {
     console.error("Erreur lors de l'update du Trip :", error);
     return res.status(404).json({ result: false, error: "Erreur lors de l'update du Trip" });
   }
-
-  // IL FAUT AJOUTER LA GESTION DE L'EXISTANCE DES INPUTS ET MODIFIER LES INFOS RENVOYEES SI TRUE
 });
 
 
