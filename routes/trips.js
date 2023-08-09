@@ -91,28 +91,31 @@ router.put("/", async (req, res) => {
     }
 
     // On recherche un trip suivant le tokenTrip
-    const trip = await Trip.findOne({ tokenTrip });
+    const findTrip = await Trip.findOne({ tokenTrip });
 
     // Si on trouve pas le trip, on retourne une erreur
-    if (!trip) {
+    if (!findTrip) {
       return res.status(404).json({ result: false, error: "Trip not found" });
     }
 
     // Si le user n'est pas propriétaire du trip
-    if (trip.user.toString() !== user._id.toString()) {
+    if (findTrip.user.toString() !== user._id.toString()) {
       return res.status(404).json({ result: false, error: "Not allowed" });
     }
 
     // On update le Trip
-    const update = await Trip.updateOne({ _id: trip._id }, { name, dateStart, dateEnd, description });
+    const updateTrip = await Trip.findOneAndUpdate({ _id: findTrip._id }, { name, dateStart, dateEnd, description }, { new: true });
 
-    return res.json({ result: true });
+    // On populate les infos du Trip
+    await updateTrip.populate([{ path: "user" }, { path: "participants" }]);
+
+    // On filtre les infos que l'on veut renvoyer en front
+    const tripRes = parseTrip(updateTrip);
+    return res.json({ result: true, trip: tripRes });
   } catch (error) {
     console.error("Erreur lors de l'update du Trip :", error);
     return res.status(404).json({ result: false, error: "Erreur lors de l'update du Trip" });
   }
-
-  // IL FAUT AJOUTER LA GESTION DE L'EXISTANCE DES INPUTS ET MODIFIER LES INFOS RENVOYEES SI TRUE
 });
 
 // Route DELETE pour supprimer un Trip
