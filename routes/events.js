@@ -96,10 +96,10 @@ router.put("/", async (req, res) => {
       return res.status(404).json({ result: false, error: "User not found" });
     }
 
-    // On recherche un trip suivant le tokenTrip
+    // On recherche un event suivant le tokenEvent
     const findEvent = await Event.findOne({ tokenEvent });
 
-    // Si on trouve pas le trip, on retourne une erreur
+    // Si on trouve pas l'event, on retourne une erreur
     if (!findEvent) {
       return res.status(404).json({ result: false, error: "Event not found" });
     }
@@ -120,8 +120,8 @@ router.put("/", async (req, res) => {
 
     return res.json({ result: true, event: eventRes });
   } catch (error) {
-    console.error("Erreur lors de l'update du Trip :", error);
-    return res.status(404).json({ result: false, error: "Erreur lors de l'update du Trip" });
+    console.error("Erreur lors de l'update de l'event :", error);
+    return res.status(404).json({ result: false, error: "Erreur lors de l'update de l'event" });
   }
 });
 
