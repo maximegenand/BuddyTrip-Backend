@@ -86,6 +86,56 @@ router.post("/", async (req, res) => {
   }
 });
 
+
+
+// Route PUT pour update un event
+router.put("/", async (req, res) => {
+  // On vérifie si les infos obligatoires sont bien renseignées
+  if (
+    !checkBody(req.body, ["token", "event"])
+    && !checkBody(req.body.token, ["tokenTrip", "category", "name", "date", "timeStart", "place", "description"])
+  ) {
+    return res.status(404).json({ result: false, error: "Missing or empty fields" });
+  }
+
+  // On récupère les infos du req.body
+  const token = req.body.token;
+  const { category, name, date, timeStart, timeEnd, place, seats, ticket, description } = req.body.event;
+
+  try {
+    // On vérifie si l'utilisateur existe, et si oui on renvoie ses infos
+    const user = await checkTokenSession(token);
+    if (!user) {
+      return res.status(404).json({ result: false, error: "User not found" });
+    }
+
+    // On recherche un trip suivant le tokenTrip
+    const findEvent = await Event.findOne({ tokenEvent });
+
+    // Si on trouve pas le trip, on retourne une erreur
+    if (!findEvent) {
+      return res.status(404).json({ result: false, error: "Event not found" });
+    }
+
+    // Si le user n'est pas propriétaire de l'event
+    if (findEvent.user.toString() !== user._id.toString()) {
+      return res.status(404).json({ result: false, error: "Not allowed" });
+    }
+
+    // On update l'event
+    const update = await Event.updateOne({ _id: findEvent._id }, { category, name, date, timeStart, timeEnd, place, seats, ticket, description });
+    // Si on n'a pas pu modifier
+    return res.json({ result: true, update });
+  } catch (error) {
+    console.error("Erreur lors de l'update du Trip :", error);
+    return res.status(404).json({ result: false, error: "Erreur lors de l'update du Trip" });
+  }
+
+  // IL FAUT AJOUTER LA GESTION DE L'EXISTANCE DES INPUTS ET MODIFIER LES INFOS RENVOYEES SI TRUE
+});
+
+
+
 // Route DELETE pour supprimer un Event
 router.delete("/", async (req, res) => {
   // On vérifie si les infos obligatoires sont bien renseignées
