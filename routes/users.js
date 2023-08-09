@@ -88,9 +88,6 @@ router.post('/signin', async (req, res) => {
     await user.populate("trips");
     await user.populate([{ path: "trips.user" }, { path: "trips.participants" }]);
 
-    // On trie les trips dans l'ordre ascendant
-    user.trips.sort((a, b) => new Date(a.dateStart) - new Date(b.dateStart));
-
     // On filtre la date pour afficher seulement les Trip dont la date de fin est égale ou après aujourd'hui
     const tripsBrut = user.trips.filter((trip) => new Date(trip.dateEnd) >= dateNow);
 
