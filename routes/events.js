@@ -80,14 +80,14 @@ router.put("/", async (req, res) => {
   // On vérifie si les infos obligatoires sont bien renseignées
   if (
     !checkBody(req.body, ["token", "event"])
-    && !checkBody(req.body.token, ["tokenTrip", "category", "name", "date", "timeStart", "place", "description"])
+    && !checkBody(req.body.token, ["tokenTrip", "tokenEvent", "category", "name", "date", "timeStart", "place", "description"])
   ) {
     return res.status(404).json({ result: false, error: "Missing or empty fields" });
   }
 
   // On récupère les infos du req.body
   const token = req.body.token;
-  const { category, name, date, timeStart, timeEnd, place, seats, ticket, description } = req.body.event;
+  const { tokenEvent, category, name, date, timeStart, timeEnd, place, seats, ticket, description } = req.body.event;
 
   try {
     // On vérifie si l'utilisateur existe, et si oui on renvoie ses infos
