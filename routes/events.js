@@ -110,7 +110,7 @@ router.put("/", async (req, res) => {
     }
 
     // On update l'event
-    const update = await Event.updateOne({ _id: findEvent._id }, { category, name, date, timeStart, timeEnd, place, seats, ticket, description });
+    const update = await Event.findOneAndUpdate({ _id: findEvent._id }, { category, name, date, timeStart, timeEnd, place, seats, ticket, description });
     // Si on n'a pas pu modifier
     return res.json({ result: true, update });
   } catch (error) {
