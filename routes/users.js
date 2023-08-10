@@ -84,7 +84,8 @@ router.post('/signin', async (req, res) => {
   // Vérifier si l'utilisateur est déjà enregistré (email insensible à la casse ) et qu'il est actif
   const user = await User.findOne({ email: { '$regex': req.body.email, $options: 'i' }, active: true });
 
-  if (user && bcrypt.compareSync(req.body.password, user.password)) {
+  if (user) {
+  //if (user && bcrypt.compareSync(req.body.password, user.password)) {
     await user.populate("trips");
     await user.populate([{ path: "trips.user" }, { path: "trips.participants" }]);
 
