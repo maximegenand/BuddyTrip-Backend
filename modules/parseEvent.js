@@ -6,7 +6,7 @@ const parseEvent = eventBrut => {
   // On récupère seulement les infos qu'on veut renvoyer
   const { tokenEvent, category, name, date, timeStart, timeEnd, place, description, seats, ticket } = event;
 
-  const user = { tokenUser: event.user.tokenUser, username: event.user.username };
+  const user = { tokenUser: event.user.tokenUser, username: event.user.username, image: event.user.image };
 
   const { tokenTrip } = event.trip;
 
