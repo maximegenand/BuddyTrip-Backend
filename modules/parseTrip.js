@@ -7,8 +7,8 @@ const parseTrip = tripBrut => {
   const { tokenTrip, name, dateStart, dateEnd, description } = trip;
   const user = { tokenUser: trip.user.tokenUser, username: trip.user.username };
   const participants = trip.participants.map( obj => {
-    const { tokenUser, username, picture } = obj;
-    return { tokenUser, username, picture };
+    const { tokenUser, username, image } = obj;
+    return { tokenUser, username, image };
   });
 
   return {

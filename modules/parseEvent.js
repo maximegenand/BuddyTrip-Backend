@@ -11,14 +11,14 @@ const parseEvent = eventBrut => {
   const { tokenTrip } = event.trip;
 
   const participants = event.participants.map( obj => {
-    const { tokenUser, username, picture } = obj;
-    return { tokenUser, username, picture };
+    const { tokenUser, username, image } = obj;
+    return { tokenUser, username, image };
   });
 
   const infos = event.infos.map( obj => {
     return {
       tokenInfo: obj.tokenInfo,
-      user: { tokenUser: obj.user.tokenUser, username: obj.user.username, picture: obj.user.picture },
+      user: { tokenUser: obj.user.tokenUser, username: obj.user.username, image: obj.user.image },
       name: obj.name,
       type: obj.type,
       uri: obj.uri,
