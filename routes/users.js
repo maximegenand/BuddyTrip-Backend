@@ -115,12 +115,12 @@ router.post('/signin', async (req, res) => {
 
 // Route pour la connexion avec token (isconected)
 router.post('/isconnected', async (req, res) => {
-  if (!checkBody(req.query, ['token'])) {
+  if (!checkBody(req.body, ['token'])) {
     return res.json({ result: false, error: '' });
   }
 
   // Vérifier si l'utilisateur avec ce tokenSession existe
-  const user = await User.findOne({ tokenSession: req.query.token, active: true });
+  const user = await User.findOne({ tokenSession: req.body.token, active: true });
 
   if (user) {
     await user.populate("trips");
