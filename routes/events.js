@@ -88,7 +88,7 @@ router.put("/", async (req, res) => {
   // On récupère les infos du req.body
   const token = req.body.token;
   const { tokenEvent, category, name, date, timeStart, timeEnd, place, seats, ticket, description } = req.body.event;
-
+console.log(seats)
   try {
     // On vérifie si l'utilisateur existe, et si oui on renvoie ses infos
     const user = await checkTokenSession(token);
