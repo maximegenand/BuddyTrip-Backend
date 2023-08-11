@@ -111,6 +111,45 @@ router.post('/signin', async (req, res) => {
   }
 });
 
+
+
+// Route pour la connexion avec token (isconected)
+router.post('/isconnected', async (req, res) => {
+  if (!checkBody(req.query, ['token'])) {
+    return res.json({ result: false, error: '' });
+  }
+
+  // Vérifier si l'utilisateur avec ce tokenSession existe
+  const user = await User.findOne({ tokenSession: req.query.token, active: true });
+
+  if (user) {
+    await user.populate("trips");
+    await user.populate([{ path: "trips.user" }, { path: "trips.participants" }]);
+
+    // On filtre la date pour afficher seulement les Trip dont la date de fin est égale ou après aujourd'hui
+    const tripsBrut = user.trips.filter((trip) => new Date(trip.dateEnd) >= dateNow);
+
+    // On filtre les infos que l'on veut renvoyer en front
+    const trips = tripsBrut.map((trip) => parseTrip(trip));
+
+    return res.json({
+      result: true,
+      user: {
+        token: user.tokenSession,
+        tokenUser: user.tokenUser,
+        username: user.username,
+        email: user.email,
+        image: user.image,
+      },
+      trips,
+    });
+  } else {
+    res.json({ result: false, error: '' });
+  }
+});
+
+
+
 // Route pour la liste des users (sauf celui qui fait la requête)
 router.get('/list', async (req, res) => {
   // On vérifie si les infos obligatoires sont bien renseignées
